@@ -4,6 +4,7 @@ import java.awt.event.ActionEvent;
 import java.io.Serial;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import javax.swing.*;
@@ -19,6 +20,7 @@ public class TimeManager extends JPanel implements Supplier<Integer> {
     private final JToggleButton autoButton;
     private final JButton stepButton;
 
+    private final AtomicInteger scheduledAmount = new AtomicInteger(0);
     private final Timer timer = new Timer();
     private long autoStepSize = 1000l;
 
@@ -40,6 +42,7 @@ public class TimeManager extends JPanel implements Supplier<Integer> {
     private void autoMode(ActionEvent e) {
         if (isAuto()) {
             stepButton.setEnabled(false);
+            scheduledAmount.incrementAndGet();
             timer.schedule(createTask(), autoStepSize);
         } else {
             stepButton.setEnabled(true);
@@ -50,11 +53,18 @@ public class TimeManager extends JPanel implements Supplier<Integer> {
         return new TimerTask() {
             @Override
             public void run() {
+                if (scheduledAmount.decrementAndGet() > 0)
+                    return;
                 if (isAuto()) {
-                    General.step();
-                    timer.schedule(createTask(), autoStepSize);
+                    SwingUtilities.invokeLater(() -> {
+                        General.step();
+                        scheduledAmount.incrementAndGet();
+                        timer.schedule(createTask(), autoStepSize);
+                    });
                 } else {
-                    stepButton.setEnabled(true);
+                    SwingUtilities.invokeLater(() -> {
+                        stepButton.setEnabled(true);
+                    });
                 }
             }
         };

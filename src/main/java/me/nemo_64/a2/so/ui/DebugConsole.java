@@ -17,6 +17,7 @@ public class DebugConsole extends JPanel {
     public static final Color ERROR_COLOR = new Color(255, 0, 0);
 
     private final JTextPane console = new JTextPane();
+    private final JScrollPane scrollPane = new JScrollPane(console);
     private final JButton clearButton = new JButton("Clear");
 
     public DebugConsole() {
@@ -25,7 +26,7 @@ public class DebugConsole extends JPanel {
         clearButton.addActionListener((e) -> clear());
         console.setEditable(false);
         console.setPreferredSize(new Dimension(320, 200));
-        add(new JScrollPane(console), "grow, wrap");
+        add(scrollPane, "grow, wrap");
         add(clearButton, "growx");
     }
 
@@ -54,13 +55,23 @@ public class DebugConsole extends JPanel {
     private void addText(String msg, Color c) {
         if (!msg.endsWith("."))
             msg += ".";
-        msg += "\n";
-        SimpleAttributeSet style = new SimpleAttributeSet();
-        StyleConstants.setForeground(style, c);
+
+        JScrollBar verticalScrollBar = scrollPane.getVerticalScrollBar();
+        boolean scrollAtBottom = (verticalScrollBar.getValue()
+                + verticalScrollBar.getVisibleAmount()) == verticalScrollBar.getMaximum();
+
+        StyledDocument doc = console.getStyledDocument();
+        SimpleAttributeSet attributes = new SimpleAttributeSet();
+        StyleConstants.setForeground(attributes, c);
 
         try {
-            console.getDocument().insertString(console.getDocument().getLength(), msg, style);
+            doc.insertString(doc.getLength(), msg + "\n", attributes);
         } catch (BadLocationException e) {
+            e.printStackTrace();
+        }
+
+        if (scrollAtBottom) {
+            SwingUtilities.invokeLater(() -> verticalScrollBar.setValue(verticalScrollBar.getMaximum()));
         }
     }
 
